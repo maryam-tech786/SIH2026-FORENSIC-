@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from models.evidence import Evidence
+from services.metadata import extract_metadata
 
 
 router = APIRouter(
@@ -25,11 +26,19 @@ def upload_evidence(
 
     os.makedirs(upload_folder, exist_ok=True)
 
-    file_path = os.path.join(upload_folder, file.filename)
+    file_path = os.path.join(
+        upload_folder,
+        file.filename
+    )
 
+    # Save uploaded video
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
+    # Extract video metadata
+    metadata = extract_metadata(file_path)
+
+    # Save evidence information in database
     new_evidence = Evidence(
         case_id=case_id,
         file_name=file.filename,
@@ -47,5 +56,6 @@ def upload_evidence(
         "evidence_id": new_evidence.id,
         "case_id": new_evidence.case_id,
         "file_name": new_evidence.file_name,
-        "status": new_evidence.status
+        "status": new_evidence.status,
+        "metadata": metadata
     }
