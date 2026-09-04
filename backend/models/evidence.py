@@ -1,0 +1,14 @@
+from sqlalchemy import Column, Integer, String, ForeignKey
+
+from database.connection import Base
+
+
+class Evidence(Base):
+    __tablename__ = "evidence"
+
+    id = Column(Integer, primary_key=True, index=True)
+    case_id = Column(Integer, ForeignKey("cases.id"))
+    file_name = Column(String, nullable=False)
+    file_path = Column(String, nullable=False)
+    file_type = Column(String)
+    status = Column(String, default="Uploaded")

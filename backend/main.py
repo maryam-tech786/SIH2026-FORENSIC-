@@ -1,8 +1,11 @@
 from fastapi import FastAPI
 
 from database.connection import Base, engine
+
 from models.case import Case
-from routers import cases
+from models.evidence import Evidence
+
+from routers import cases, evidence
 
 
 Base.metadata.create_all(bind=engine)
@@ -15,6 +18,7 @@ app = FastAPI(
 
 
 app.include_router(cases.router)
+app.include_router(evidence.router)
 
 
 @app.get("/")
