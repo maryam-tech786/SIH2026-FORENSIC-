@@ -32,3 +32,8 @@ backend/models/__pycache__/
 backend/routers/__pycache__/
 *.pyc
 *.db
+
+# Forensic evidence and test files
+forensic/evidence/stored_evidence/
+forensic/evidence/test_video.mp4
+forensic/evidence/acquisition_test.mp4
