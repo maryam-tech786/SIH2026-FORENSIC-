@@ -1,5 +1,7 @@
 import os
 import shutil
+from services.video_analysis import analyze_video
+
 
 from fastapi import APIRouter, UploadFile, File, Depends
 from sqlalchemy.orm import Session
@@ -95,4 +97,26 @@ def verify_evidence(
         "stored_hash": evidence.file_hash,
         "current_hash": current_hash,
         "integrity_status": integrity_status
+    }
+@router.post("/{evidence_id}/analyze")
+def analyze_evidence(
+    evidence_id: int,
+    db: Session = Depends(get_db)
+):
+    evidence = db.query(Evidence).filter(
+        Evidence.id == evidence_id
+    ).first()
+
+    if not evidence:
+        return {
+            "message": "Evidence not found"
+        }
+
+    analysis_result = analyze_video(evidence.file_path)
+
+    return {
+        "message": "Video analysis completed successfully!",
+        "evidence_id": evidence.id,
+        "file_name": evidence.file_name,
+        "analysis": analysis_result
     }
