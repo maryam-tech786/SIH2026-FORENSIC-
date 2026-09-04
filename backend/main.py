@@ -1,45 +1,52 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from database.connection import Base, engine
 from routers import cases
-from routers import evidence as evidence_router
-
-from models import case
-from models import evidence as evidence_model
+from routers import evidence
 
 
-# Create database tables
-Base.metadata.create_all(bind=engine)
-
-
-# Create FastAPI application
 app = FastAPI(
-    title="CCTV Forensic Backend"
+    title="SIH 2026 Forensic Evidence API"
 )
 
 
-# Enable CORS
+# ==========================================
+# CORS CONFIGURATION
+# Allows React frontend to access this backend
+# ==========================================
+
 app.add_middleware(
     CORSMiddleware,
+
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173"
     ],
+
     allow_credentials=True,
+
     allow_methods=["*"],
+
     allow_headers=["*"],
 )
 
 
-# Register API routers
+# ==========================================
+# ROUTERS
+# ==========================================
+
 app.include_router(cases.router)
-app.include_router(evidence_router.router)
+
+app.include_router(evidence.router)
 
 
-# Root endpoint
+# ==========================================
+# HOME ROUTE
+# ==========================================
+
 @app.get("/")
-def root():
+def home():
+
     return {
-        "message": "CCTV Forensic Backend is Running Successfully!"
+        "message": "SIH 2026 Forensic Evidence Backend is running successfully!"
     }
