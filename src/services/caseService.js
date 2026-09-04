@@ -1,61 +1,136 @@
-import { MOCK_CASES } from '../data/mockCases';
+import { apiRequest } from './api';
 
-// In-memory state during session
-let casesStore = [...MOCK_CASES];
 
-const delay = (ms = 350) => new Promise(resolve => setTimeout(resolve, ms));
+// Convert backend case data into the format
+// already expected by the React frontend.
+const mapCaseFromBackend = (backendCase) => ({
+  id: backendCase.id,
 
-export const getCases = async (searchQuery = '', statusFilter = 'ALL') => {
-  await delay(250);
-  return casesStore.filter(c => {
-    const matchesSearch =
-      c.firNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.policeStation.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.investigatingOfficer.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'ALL' || c.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-};
+  // Frontend naming
+  firNumber: backendCase.fir_number,
+  title: backendCase.case_name,
 
-export const getCaseById = async (id) => {
-  await delay(200);
-  const found = casesStore.find(c => c.id === id);
-  if (!found) throw new Error(`Case with ID ${id} not found`);
-  return { ...found };
-};
+  policeStation: backendCase.police_station,
+  jurisdiction: backendCase.jurisdiction,
 
-export const createCase = async (newCaseData) => {
-  await delay(500);
-  const newId = `CASE-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-  const created = {
-    id: newId,
-    firNumber: newCaseData.firNumber || `FIR No. ${Math.floor(100 + Math.random() * 900)}/2026`,
-    title: newCaseData.title,
-    policeStation: newCaseData.policeStation,
-    jurisdiction: newCaseData.jurisdiction || 'New Delhi',
-    investigatingOfficer: newCaseData.investigatingOfficer || 'Insp. Rajesh Kumar (DL-8821)',
-    forensicExaminer: newCaseData.forensicExaminer || 'Dr. Sunita Rao (SSO Digital Forensics)',
-    dateOpened: new Date().toISOString().split('T')[0],
-    incidentDate: newCaseData.incidentDate || new Date().toISOString().replace('T', ' ').slice(0, 19),
-    status: 'Open',
-    priority: newCaseData.priority || 'Medium',
-    evidenceCount: 0,
-    tamperFlagsCount: 0,
-    summary: newCaseData.summary || 'Initial seizure registered for forensic examination.',
-    tags: newCaseData.tags || ['Initial Seizure', 'CCTV DVR'],
-  };
-  casesStore.unshift(created);
-  return created;
-};
+  investigatingOfficer: backendCase.investigating_officer,
+  forensicExaminer: backendCase.forensic_examiner,
 
-export const updateCaseStatus = async (id, status) => {
-  await delay(300);
-  const index = casesStore.findIndex(c => c.id === id);
-  if (index !== -1) {
-    casesStore[index] = { ...casesStore[index], status };
-    return { ...casesStore[index] };
+  incidentDate: backendCase.incident_date,
+  dateOpened: backendCase.date_opened,
+
+  priority: backendCase.priority,
+  status: backendCase.status,
+
+  summary: backendCase.description,
+
+  // These will come from the Evidence API later.
+  evidenceCount: 0,
+  tamperFlagsCount: 0,
+
+  // Keep this so the existing UI does not break.
+  tags: [],
+});
+
+
+// GET ALL CASES
+export const getCases = async (
+  searchQuery = '',
+  statusFilter = 'ALL'
+) => {
+
+  const data = await apiRequest('/cases/');
+
+  let cases = data.map(mapCaseFromBackend);
+
+  // Frontend search
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase();
+
+    cases = cases.filter((c) =>
+      c.firNumber.toLowerCase().includes(query) ||
+      c.title.toLowerCase().includes(query) ||
+      c.policeStation.toLowerCase().includes(query) ||
+      c.investigatingOfficer.toLowerCase().includes(query)
+    );
   }
-  throw new Error(`Case ${id} not found`);
+
+  // Frontend status filter
+  if (statusFilter !== 'ALL') {
+    cases = cases.filter(
+      (c) => c.status === statusFilter
+    );
+  }
+
+  return cases;
+};
+
+
+// GET ONE CASE
+export const getCaseById = async (id) => {
+
+  const data = await apiRequest(`/cases/${id}`);
+
+  if (data.message === 'Case not found') {
+    throw new Error(`Case with ID ${id} not found`);
+  }
+
+  return mapCaseFromBackend(data);
+};
+
+
+// CREATE CASE
+export const createCase = async (newCaseData) => {
+
+  const data = await apiRequest('/cases/', {
+    method: 'POST',
+
+    headers: {
+      'Content-Type': 'application/json',
+    },
+
+    body: JSON.stringify({
+      fir_number: newCaseData.firNumber,
+      case_name: newCaseData.title,
+      description: newCaseData.summary,
+
+      police_station: newCaseData.policeStation,
+      jurisdiction: newCaseData.jurisdiction,
+
+      investigating_officer:
+        newCaseData.investigatingOfficer,
+
+      forensic_examiner:
+        newCaseData.forensicExaminer,
+
+      incident_date: newCaseData.incidentDate,
+      date_opened: newCaseData.dateOpened,
+
+      priority: newCaseData.priority,
+    }),
+  });
+
+  return mapCaseFromBackend(data);
+};
+
+
+// UPDATE CASE
+export const updateCaseStatus = async (
+  id,
+  status
+) => {
+
+  const data = await apiRequest(`/cases/${id}`, {
+    method: 'PUT',
+
+    headers: {
+      'Content-Type': 'application/json',
+    },
+
+    body: JSON.stringify({
+      status: status,
+    }),
+  });
+
+  return mapCaseFromBackend(data);
 };

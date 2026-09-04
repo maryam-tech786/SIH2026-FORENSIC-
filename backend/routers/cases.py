@@ -6,96 +6,101 @@ from models.case import Case
 from schemas.case import CaseCreate, CaseUpdate
 
 
-router = APIRouter(
-    prefix="/cases",
-    tags=["Cases"]
-)
+router = APIRouter(prefix="/cases", tags=["Cases"])
 
 
+# CREATE CASE
 @router.post("/")
 def create_case(
     case: CaseCreate,
     db: Session = Depends(get_db)
 ):
     new_case = Case(
+        fir_number=case.fir_number,
         case_name=case.case_name,
-        description=case.description
+        description=case.description,
+        police_station=case.police_station,
+        jurisdiction=case.jurisdiction,
+        investigating_officer=case.investigating_officer,
+        forensic_examiner=case.forensic_examiner,
+        incident_date=case.incident_date,
+        date_opened=case.date_opened,
+        priority=case.priority,
+        status="Open"
     )
 
     db.add(new_case)
     db.commit()
     db.refresh(new_case)
 
-    return {
-        "message": "Case created successfully!",
-        "case_id": new_case.id,
-        "case_name": new_case.case_name,
-        "description": new_case.description,
-        "status": new_case.status
-    }
+    return new_case
 
 
+# GET ALL CASES
 @router.get("/")
-def get_all_cases(db: Session = Depends(get_db)):
+def get_all_cases(
+    db: Session = Depends(get_db)
+):
     cases = db.query(Case).all()
+
     return cases
 
 
+# GET ONE CASE
 @router.get("/{case_id}")
 def get_case_by_id(
     case_id: int,
     db: Session = Depends(get_db)
 ):
-    case = db.query(Case).filter(Case.id == case_id).first()
+    case = db.query(Case).filter(
+        Case.id == case_id
+    ).first()
 
     if not case:
-        return {
-            "message": "Case not found"
-        }
+        return {"message": "Case not found"}
 
     return case
 
 
+# UPDATE CASE
 @router.put("/{case_id}")
 def update_case(
     case_id: int,
     updated_data: CaseUpdate,
     db: Session = Depends(get_db)
 ):
-    case = db.query(Case).filter(Case.id == case_id).first()
+    case = db.query(Case).filter(
+        Case.id == case_id
+    ).first()
 
     if not case:
-        return {
-            "message": "Case not found"
-        }
+        return {"message": "Case not found"}
 
-    if updated_data.case_name is not None:
-        case.case_name = updated_data.case_name
+    update_data = updated_data.model_dump(
+        exclude_unset=True
+    )
 
-    if updated_data.description is not None:
-        case.description = updated_data.description
-
-    if updated_data.status is not None:
-        case.status = updated_data.status
+    for field, value in update_data.items():
+        setattr(case, field, value)
 
     db.commit()
     db.refresh(case)
 
-    return {
-        "message": "Case updated successfully!",
-        "case": case
-    }
+    return case
+
+
+# DELETE CASE
 @router.delete("/{case_id}")
 def delete_case(
     case_id: int,
     db: Session = Depends(get_db)
 ):
-    case = db.query(Case).filter(Case.id == case_id).first()
+    case = db.query(Case).filter(
+        Case.id == case_id
+    ).first()
 
     if not case:
-        return {
-            "message": "Case not found"
-        }
+        return {"message": "Case not found"}
 
     db.delete(case)
     db.commit()

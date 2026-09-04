@@ -23,11 +23,21 @@ export const CaseList = () => {
   const [statusFilter, setStatusFilter] = useState('ALL');
 
   const fetchCases = async () => {
-    setLoading(true);
+  setLoading(true);
+
+  try {
     const data = await getCases(searchQuery, statusFilter);
+
+    console.log('CASES FROM BACKEND:', data);
+
     setCases(data);
+  } catch (error) {
+    console.error('FAILED TO LOAD CASES:', error);
+    setCases([]);
+  } finally {
     setLoading(false);
-  };
+  }
+};
 
   useEffect(() => {
     fetchCases();
